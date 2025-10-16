@@ -30,14 +30,9 @@ const MyLocationMap = () => {
     setName("");
   };
 
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      alert(
-        "Geolocation service is not supported by your browser or you have declined the service"
-      );
-    }
-
-    const watchId = navigator.geolocation.watchPosition(
+ useEffect(() => {
+  const interval = setInterval(() => {
+    navigator.geolocation.getCurrentPosition(
       (position) => {
         const coords = {
           lat: position.coords.latitude,
@@ -46,26 +41,18 @@ const MyLocationMap = () => {
         setPosition(coords);
         socket.emit("send-current-location", coords);
       },
-      (err) => {
-        console.log("Geolocation error", err);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0,
-      }
+      (err) => console.error("Geolocation error", err),
+      { enableHighAccuracy: true }
     );
+  }, 5000);
 
-    socket.on("user-update", (data) => {
-      console.log(data);
-      setUsers(data);
-    });
+  socket.on("user-update", (data) => setUsers(data));
 
-    return () => {
-      navigator.geolocation.clearWatch(watchId);
-      socket.off("users-update");
-    };
-  }, []);
+  return () => {
+    clearInterval(interval);
+    socket.off("user-update");
+  };
+}, [socket]);
 
   // If location not yet loaded, show nothing or loading message
   if (!Position) return <p>Loading your location...</p>;
